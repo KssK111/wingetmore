@@ -1,0 +1,5 @@
+This version does not use async, so it has the same speed as just using winget
+However it can do multiple things in one command
+It's also better than winget because of nicely colored text and a few emojis in the output of the script
+The only advantage compared to the rust version is how the output of the commands is displayed
+This is here only because I created this script before the rust program

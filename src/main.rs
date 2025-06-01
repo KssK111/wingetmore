@@ -1,5 +1,4 @@
-use std::{borrow::Cow, pin::Pin};
-use std::future::Future;
+use std::borrow::Cow;
 use futures::{stream::FuturesUnordered, StreamExt};
 use tokio::process::Command;
 use wingetmore::*;
@@ -8,7 +7,7 @@ use wingetmore::*;
 async fn main()
 {
     let mut tasks = FuturesUnordered::new();
-    let [install_vec, uninstall_vec, mut upgrade_vec, search_vec] = parse_args();
+    let [install_vec, uninstall_vec, mut upgrade_vec, search_vec, other_vec] = parse_args();
 
     upgrade_vec =
     if upgrade_vec.contains(&"--all".to_string())
@@ -38,24 +37,11 @@ async fn main()
     }
     else {upgrade_vec};
 
-    let operations: [(Vec<String>, fn(String) -> Pin<Box<dyn Future<Output = ()> + Send>>); 4] =
-    [
-        (install_vec, |arg| Box::pin(make_future::install(arg))),
-        (uninstall_vec, |arg| Box::pin(make_future::uninstall(arg))),
-        (upgrade_vec, |arg| Box::pin(make_future::upgrade(arg))),
-        (search_vec, |arg| Box::pin(make_future::search(arg))),
-    ];
+    for argument in install_vec {tasks.push(creating_futures::make_future(argument, creating_futures::Mode::Install));}
+    for argument in uninstall_vec {tasks.push(creating_futures::make_future(argument, creating_futures::Mode::Uninstall));}
+    for argument in upgrade_vec {tasks.push(creating_futures::make_future(argument, creating_futures::Mode::Upgrade));}
+    for argument in search_vec {tasks.push(creating_futures::make_future(argument, creating_futures::Mode::Search));}
+    for argument in other_vec {tasks.push(creating_futures::make_future(argument, creating_futures::Mode::Other));}
 
-    for (args, fut_function) in operations.iter()
-    {
-        for argument in args.iter()
-        {
-            tasks.push(fut_function(argument.to_owned()));
-        }
-    }
-
-
-    while let Some(_) = tasks.next().await
-    {
-    }
+    while let Some(_) = tasks.next().await {}
 }

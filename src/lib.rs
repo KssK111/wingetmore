@@ -1,79 +1,75 @@
 use std::env::args;
 
-use tokio::io::{self, stdin, AsyncBufReadExt, BufReader};
-
-pub fn parse_args() -> [Vec<String>; 4]
+pub fn parse_args() -> [Vec<String>; 5]
 {
-    let mut vec_array: [Vec<String>; 4] = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
-    let (mut install,mut uninstall,mut upgrade/*,mut search*/) = (false, false, false/*, false*/);
+    let mut vec_array: [Vec<String>; 5] = [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()];
+    let (mut install,mut uninstall,mut upgrade,mut search) = (false, false, false, false);
 
     for arg in args().skip(1)
     {
-        if arg == "install" {install = true; uninstall = false; upgrade = false;/* search = false;*/ continue;}
-        if arg == "uninstall" {install = false; uninstall = true; upgrade = false;/* search = false;*/ continue;}
-        if arg == "upgrade" {install = false; uninstall = false; upgrade = true;/* search = false;*/ continue;}
-        if arg == "search" {install = false; uninstall = false; upgrade = false;/* search = true;*/ continue;}
+        if arg == "install" {install = true; uninstall = false; upgrade = false; search = false; continue;}
+        if arg == "uninstall" {install = false; uninstall = true; upgrade = false; search = false; continue;}
+        if arg == "upgrade" {install = false; uninstall = false; upgrade = true; search = false; continue;}
+        if arg == "search" {install = false; uninstall = false; upgrade = false; search = true; continue;}
+        if arg == "other" {install = false; uninstall = false; upgrade = false; search = false; continue;}
 
         vec_array
         [
             if install {0}
             else if uninstall {1}
             else if upgrade {2}
-            else {3}
+            else if search {3}
+            else {4} //other
         ].push(arg);
     }
 
     vec_array
 }
 
-pub mod make_future
+pub mod creating_futures
 {
     use tokio::process::Command;
-
-    pub async fn install(argument: String)
+    pub enum Mode
     {
-        println!("Trying to install: {}", argument);
-
-        let mut command = Command::new("winget.exe");
-        command.arg("install");
-        command.arg(&argument);
-
-        let command_result = command.output().await;
-        match command_result
-        {
-            Ok(output) =>
-            {
-                println!("OK - install {} has ended", argument);
-                if !output.stdout.is_empty()
-                {
-                    println!("{}", String::from_utf8_lossy(&output.stdout));
-                }
-                if !output.stderr.is_empty()
-                {
-                    println!("{}", String::from_utf8_lossy(&output.stderr));
-                }
-            }
-            Err(error) =>
-            {
-                eprintln!("ERROR - install {} failed\n{}", argument, error);
-            }
-        }
+        Install,
+        Uninstall,
+        Upgrade,
+        Search,
+        Other
     }
 
-    pub async fn uninstall(argument: String)
+    pub async fn make_future(argument: String, mode: Mode)
     {
-        println!("Trying to uninstall: {}", argument);
+        let args_to_print =
+        match mode
+        {
+            Mode::Install => format!("install {}", argument),
+            Mode::Uninstall => format!("uninstall {}", argument),
+            Mode::Upgrade => format!("upgrade {}", argument),
+            Mode::Search => format!("search {}", argument),
+            Mode::Other => argument,
+        };
+        let command_args = args_to_print.split_whitespace();
+        let command_args =
+        {
+            let mut temp = Vec::new();
+            for arg in command_args
+            {
+                temp.push(arg);
+            }
+            temp
+        };
+        println!("Trying to {}", args_to_print);
 
         let mut command = Command::new("winget.exe");
-        command.arg("uninstall");
-        command.arg(&argument);
+        command.args(command_args);
 
         let command_result = command.output().await;
         match command_result
         {
             Ok(output) =>
             {
-                println!("OK - uninstall {} has ended", argument);
+                println!("OK - {} has ended", args_to_print);
                 if !output.stdout.is_empty()
                 {
                     println!("{}", String::from_utf8_lossy(&output.stdout));
@@ -85,73 +81,13 @@ pub mod make_future
             }
             Err(error) =>
             {
-                eprintln!("ERROR - uninstall {} failed\n{}", argument, error);
-            }
-        }
-    }
-
-    pub async fn upgrade(argument: String)
-    {
-        println!("Trying to upgrade: {}", argument);
-
-        let mut command = Command::new("winget.exe");
-        command.arg("upgrade");
-        command.arg(&argument);
-
-        let command_result = command.output().await;
-        match command_result
-        {
-            Ok(output) =>
-            {
-                println!("OK - upgrade {} has ended", argument);
-                if !output.stdout.is_empty()
-                {
-                    println!("{}", String::from_utf8_lossy(&output.stdout));
-                }
-                if !output.stderr.is_empty()
-                {
-                    println!("{}", String::from_utf8_lossy(&output.stderr));
-                }
-            }
-            Err(error) =>
-            {
-                eprintln!("ERROR - upgrade {} failed\n{}", argument, error);
-            }
-        }
-    }
-
-    pub async fn search(argument: String)
-    {
-        println!("Trying to search: {}", argument);
-
-        let mut command = Command::new("winget.exe");
-        command.arg("search");
-        command.arg(&argument);
-
-        let command_result = command.output().await;
-        match command_result
-        {
-            Ok(output) =>
-            {
-                println!("OK - search {} has ended", argument);
-                if !output.stdout.is_empty()
-                {
-                    println!("{}", String::from_utf8_lossy(&output.stdout));
-                }
-                if !output.stderr.is_empty()
-                {
-                    println!("{}", String::from_utf8_lossy(&output.stderr));
-                }
-            }
-            Err(error) =>
-            {
-                eprintln!("ERROR - search {} failed\n{}", argument, error);
+                eprintln!("ERROR - {} failed\n{}", args_to_print, error);
             }
         }
     }
 }
 
-pub async fn take_input() -> Result<String, io::Error>
+/*pub async fn take_input() -> Result<String, io::Error>
 {
     let mut buffer = String::new();
     let mut buf_reader = BufReader::new(stdin());
@@ -162,7 +98,7 @@ pub async fn take_input() -> Result<String, io::Error>
         Ok(_) => Ok(buffer),
         Err(error) => Err(error)
     }
-}
+}*/
 
 pub fn get_update_names(output: &str) -> Vec<String>
 {

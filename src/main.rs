@@ -8,7 +8,9 @@ async fn main()
 {
     let mut tasks = FuturesUnordered::new();
     let [install_vec, uninstall_vec, mut upgrade_vec, search_vec, other_vec] = parse_args();
-    if install_vec.is_empty() && uninstall_vec.is_empty() && upgrade_vec.is_empty() && search_vec.is_empty() && other_vec.is_empty() {help(); exit(0)}
+    if install_vec.is_empty() && uninstall_vec.is_empty() && upgrade_vec.is_empty() && search_vec.is_empty()
+    && (other_vec.is_empty() || other_vec.contains(&"--help".to_string()) || other_vec.contains(&"/help".to_string()) || other_vec.contains(&"help".to_string()))
+    {help(); exit(0);}
 
     upgrade_vec =
     if upgrade_vec.contains(&"--all".to_string())

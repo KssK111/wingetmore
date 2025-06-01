@@ -141,3 +141,19 @@ pub fn get_update_names(output: &str) -> Vec<String>
     }
     names
 }
+
+pub fn help()
+{
+    println!("How to use this program:");
+    println!("wgm install program1 program2 program3 uninstall ... upgrade ... search ... other \"full command\"");
+    
+    println!("\nArguments:");
+    println!("\tinstall");
+    println!("\tuninstall");
+    println!("\tupgrade (handles --all)");
+    println!("\tsearch");
+    println!("\tother");
+
+    println!("\nAn example:");
+    println!("wgm upgrade --all search Microsoft. Google. Github other \"show Brave.Brave.Beta --versions\" search Azure");
+}
